@@ -1,0 +1,6 @@
+tensorflow==2.14.0
+tensorflow-addons
+tqdm
+pillow
+numpy<2.0
+pvbm
