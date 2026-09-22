@@ -6,20 +6,12 @@ pandas
 pillow
 scikit-image
 scipy
-<<<<<<< HEAD
-tensorflow[and-cuda]==2.21.0
-onnxruntime-gpu
-=======
 tensorflow
 onnxruntime
->>>>>>> 4f38a451f23188d992cfd031194c63b4291b10e2
 mpmath
 sympy
 matplotlib
 opencv-python-headless
 gdown
-<<<<<<< HEAD
-=======
 requests
 torchvision
->>>>>>> 4f38a451f23188d992cfd031194c63b4291b10e2
