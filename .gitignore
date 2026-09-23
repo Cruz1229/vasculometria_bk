@@ -17,3 +17,5 @@ tests
 .env.example
 .gitattributes
 run_wsl_gpu.sh
+
+.idea
