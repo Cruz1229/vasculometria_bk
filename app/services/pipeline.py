@@ -9,7 +9,8 @@ from app.schemas import (
 )
 from app.infrastructure.logging import LOGGER, _elapsed_ms
 from app.infrastructure.model_loader import ModelBundle, load_models
-from app.infrastructure.storage import PipelineContext, create_context, build_artifact_paths, ensure_runtime_dirs
+from app.infrastructure.storage import (PipelineContext, create_context, build_artifact_paths, ensure_runtime_dirs,
+                                        convert_paths_dict_to_base64)
 from app.services.preprocessing import preprocess_image
 from app.services.segmentation import segment_image
 from app.services.biomarkers import extract_features
@@ -101,6 +102,8 @@ class RetinalPipelineService:
             )
             fuzzy_tree, _classification = self._run_fuzzy_tree_stage(biomarkers)
 
+            images_b64 = convert_paths_dict_to_base64(pvbm.artifact_paths)
+
             response = SequentialPipelineResponse(
                 request_id=context.request_id,
                 filename=context.filename,
@@ -108,6 +111,7 @@ class RetinalPipelineService:
                 lunet=lunet,
                 pvbm=pvbm,
                 fuzzy_tree=fuzzy_tree,
+                images=images_b64
             )
             LOGGER.info(
                 "pipeline[%s]: completed total_ms=%.2f",
