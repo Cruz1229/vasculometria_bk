@@ -69,3 +69,4 @@ class SequentialPipelineResponse(BaseModel):
     lunet: LUNetResponse
     pvbm: PVBMStageResponse
     fuzzy_tree: FuzzyTreeResponse
+    images: Dict[str, str]
