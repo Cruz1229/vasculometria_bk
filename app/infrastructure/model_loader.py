@@ -57,10 +57,10 @@ def load_models() -> ModelBundle:
     _prepare_imports()
     os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
-    from PVBM.DiscSegmenter import DiscSegmenter
-    from PVBM.GeometryAnalysis import GeometricalVBMs
-    from PVBM.CentralRetinalAnalysis import CREVBMs
-    from LUNet.src.lunet.model import build_lunet
+    from models.PVBM.DiscSegmenter import DiscSegmenter
+    from models.PVBM.GeometryAnalysis import GeometricalVBMs
+    from models.PVBM.CentralRetinalAnalysis import CREVBMs
+    from models.LUNet.src.lunet.model import build_lunet
 
     if not WEIGHTS_PATH.exists():
         raise FileNotFoundError(f"No se encontraron los pesos: {WEIGHTS_PATH}")
