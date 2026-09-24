@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import base64
 import io
 import uuid
 from dataclasses import dataclass
@@ -69,3 +71,24 @@ def build_artifact_paths(
     if vessel_path is not None:
         artifact_paths["vessel_mask"] = str(vessel_path)
     return artifact_paths
+
+
+def convert_paths_dict_to_base64(paths: Dict[str, str]) -> Dict[str, str]:
+    images: Dict[str, str] = {}
+    for key, file_path_str in paths.items():
+
+        if key in ('input', 'preprocessed'):
+            continue
+
+        file_path = Path(file_path_str)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f'No se encontró la imagen en la ruta: {file_path_str}')
+
+        with open(file_path, 'rb') as image_file:
+            encoded_bytes = base64.b64encode(image_file.read())
+            b64_string = encoded_bytes.decode('utf-8')
+
+            images[f'{key}_b64'] = b64_string
+
+    return images
