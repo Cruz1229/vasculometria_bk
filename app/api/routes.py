@@ -1,7 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Dict, Tuple
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
+from arq.jobs import Job, JobStatus
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
+
+from app.arq.task_enqueued_response import StatusTask, TaskResultResponse, TaskMetadata, to_ai_model_response
 from app.config import SUPPORTED_IMAGE_SUFFIXES
 from app.api.dependencies import get_service
 from app.services.pipeline import RetinalPipelineService
@@ -81,13 +85,67 @@ def fuzzy_proximity_tree_stage(payload: BiomarkersResponse, service: Service) ->
         raise _service_error_to_http(exc, "Ã¡rbol de proximidad difusa") from exc
 
 
-@router.post("/pipeline/sequential", response_model=SequentialPipelineResponse)
+@router.post("/pipeline/sequential/v1", response_model=SequentialPipelineResponse)
 async def run_pipeline_sequential(service: Service, file: UploadFile = File(...)) -> SequentialPipelineResponse:
     content, filename = await _read_uploaded_image(file)
     try:
         return service.run_sequential(content, filename)
     except Exception as exc:
         raise _service_error_to_http(exc, "pipeline secuencial") from exc
+
+
+# Endpoint para encolar las peticiones
+@router.post('/pipeline/sequential', response_model=TaskResultResponse, response_model_exclude_none=True)
+async def run_pipeline_sequential(request: Request, file: UploadFile = File(...)) -> TaskResultResponse:
+    content, filename = await _read_uploaded_image(file)
+
+    try:
+        arq_redis = request.app.state.arq_redis
+
+        job = await arq_redis.enqueue_job('run_sequential_pipeline_task', content, filename)
+
+        return TaskResultResponse(
+            metadata=TaskMetadata(
+                task_id=job.job_id,
+                status=StatusTask.QUEUED,
+                message="El análisis de retina ha sido encolado correctamente."))
+
+    except Exception as exc:
+        raise _service_error_to_http(exc, 'pipeline secuencial asíncrono') from exc
+
+
+@router.get('/pipeline/task/{task_id}', response_model=TaskResultResponse, response_model_exclude_none=True)
+async def get_pipeline_task_status(request: Request, task_id: str) -> TaskResultResponse:
+    arq_redis = request.app.state.arq_redis
+    job = Job(task_id, arq_redis)
+
+    # Estado actual de la tarea
+    status = await job.status()
+
+    # Si la tarea expiró o el ID es inválido
+    if status == JobStatus.not_found:
+        raise HTTPException(status_code=404, detail=f"Tarea con ID '{task_id}' no encontrada.")
+
+    # Si la tarea aún está en cola o procesándose
+    if status in (JobStatus.deferred, JobStatus.queued, JobStatus.in_progress):
+        metadata = TaskMetadata(
+            task_id=task_id,
+            status=StatusTask.PROCESSING)
+        return TaskResultResponse(metadata=metadata)
+
+    # 3. Si la tarea ya finalizó
+    job_result = await job.result_info()
+
+    if job_result and job_result.success:
+        metadata = TaskMetadata(
+            task_id=task_id,
+            status=StatusTask.COMPLETED)
+        result = to_ai_model_response(job_result.result)
+        return TaskResultResponse(metadata=metadata, result=result)
+
+    # Ocurrió una excepción no controlada en el Worker
+    error_msg = str(job_result.result) if (job_result and job_result.result) else "Error interno en el procesamiento."
+    raise HTTPException(status_code=500, detail=f"La tarea falló: {error_msg}")
 
 
 @router.post("/predict", response_model=PredictionResponse)
