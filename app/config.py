@@ -50,15 +50,25 @@ BASE_DIR = _resolve_path("RETINAL_API_BASE_DIR", Path("/app/runtime"), PROJECT_D
 LUNET_DIR = _resolve_path("LUNET_DIR", Path("/app/models/LUNet"), LOCAL_MODELS_DIR / "LUNet", LEGACY_MODELS_DIR / "LUNet")
 PVBM_DIR = _resolve_path("PVBM_DIR", Path("/app/models/PVBM"), LOCAL_MODELS_DIR / "PVBM", LEGACY_MODELS_DIR / "PVBM")
 WEIGHTS_PATH = _resolve_path("LUNET_WEIGHTS", LUNET_DIR / "lunet_modelbest.h5")
+
 IMAGE_SIZE = int(os.getenv("IMAGE_SIZE", "1024"))
 THRESHOLD = float(os.getenv("THRESHOLD", "0.5"))
 LUNET_TF_DEVICE = os.getenv("LUNET_TF_DEVICE", "/CPU:0").strip() or "/CPU:0"
 MAX_ROI_SIZE = int(os.getenv("MAX_ROI_SIZE", "350"))
 OD_DIAMETER_UM = float(os.getenv("OD_DIAMETER_UM", "1800.0"))
 PLOT_CRE = os.getenv("PLOT_CRE", "false").lower() == "true"
+
 CORS_ALLOW_ORIGINS = _parse_list_env("RETINAL_API_CORS_ALLOW_ORIGINS", "*")
 CORS_ALLOW_ORIGIN_REGEX = os.getenv("RETINAL_API_CORS_ALLOW_ORIGIN_REGEX")
 CORS_ALLOW_CREDENTIALS = os.getenv("RETINAL_API_CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+LOAD_MODELS_ON_STARTUP = os.getenv("LOAD_MODELS_ON_STARTUP", "False").lower() in ("true", "1", "yes")
+NUM_THREADS = int(os.getenv("NUM_THREADS", 2))
+MAX_JOBS = int(os.getenv("MAX_JOBS", 1))
+JOB_TIMEOUT = int(os.getenv("JOB_TIMEOUT", 180))
+KEEP_RESULT = int(os.getenv("KEEP_RESULT", 3600))
 
 INPUT_DIR = BASE_DIR / "input"
 PREPROCESSED_DIR = BASE_DIR / "preprocessed"
