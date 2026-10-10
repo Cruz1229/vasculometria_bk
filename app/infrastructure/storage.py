@@ -26,6 +26,15 @@ def save_image(image: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path)
 
+def diameter_image_path(request_id: str, vessel_type: str) -> Path:
+    if vessel_type not in {"artery", "vein"}:
+        raise ValueError("Tipo de vaso no válido")
+    root = VIS_DIR.resolve()
+    path = (root / uuid.UUID(request_id).hex / f"diameters_{vessel_type}.png").resolve()
+    if not path.is_relative_to(root):
+        raise ValueError("Ruta de imagen no válida")
+    return path
+
 
 def create_context(image_bytes: bytes, filename: str) -> PipelineContext:
     ensure_runtime_dirs()

@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 from PIL import Image
 from skimage.morphology import skeletonize
-from app.config import MAX_ROI_SIZE, OD_DIAMETER_UM, PLOT_CRE
+from app.config import MAX_ROI_SIZE, OD_DIAMETER_UM
 from app.infrastructure.model_loader import ModelBundle
 
 
@@ -21,7 +21,31 @@ def _safe_float(value: Any) -> Optional[float]:
     return value
 
 
-def extract_features(models: ModelBundle, image_path: Path, artery_path: Path, vein_path: Path) -> Dict[str, Any]:
+def save_diameter_image(image: Image.Image, measurements, output_path: Path) -> bool:
+    if not measurements:
+        return False
+    result = image.convert("RGBA")
+    has_measurements = False
+    for measurement in measurements:
+        plot = measurement.get("plot")
+        if plot is None:
+            continue
+        rgba = np.clip(np.nan_to_num(plot), 0, 1)
+        if not np.any(rgba[..., 3]):
+            continue
+        overlay = Image.fromarray((rgba * 255).astype(np.uint8))
+        result = Image.alpha_composite(result, overlay)
+        has_measurements = True
+    if has_measurements:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        result.convert("RGB").save(output_path, format="PNG")
+    return has_measurements
+
+
+def extract_features(
+    models: ModelBundle, image_path: Path, artery_path: Path, vein_path: Path,
+    *, diameter_paths: Optional[Dict[str, Path]] = None,
+) -> Dict[str, Any]:
     if not all([models.segmenter, models.geometricalVBMs, models.creVBMs]):
         raise RuntimeError("Los módulos de PVBM no están cargados")
 
@@ -73,13 +97,19 @@ def extract_features(models: ModelBundle, image_path: Path, artery_path: Path, v
         yc=center[1],
         radius=radius,
         artery=True,
-        Toplot=PLOT_CRE,
+        Toplot=bool(diameter_paths),
     )
     if out_artery == -1:
         craek = np.nan
     else:
-        cre_art, _ = out_artery
+        cre_art, plots_artery = out_artery
         craek = cre_art.get("craek", np.nan)
+        if craek == -1:
+            craek = np.nan
+        if diameter_paths and np.isfinite(craek):
+            save_diameter_image(image, plots_artery, diameter_paths["artery"])
+        del plots_artery
+    del out_artery
 
     seg_vein = np.array(Image.open(vein_path))
     if seg_vein.ndim == 3:
@@ -98,15 +128,19 @@ def extract_features(models: ModelBundle, image_path: Path, artery_path: Path, v
         yc=center[1],
         radius=radius,
         artery=False,
-        Toplot=False,
+        Toplot=bool(diameter_paths),
     )
     if out_vein == -1:
         crvek = np.nan
     else:
-        cre_vein, _ = out_vein
+        cre_vein, plots_vein = out_vein
         crvek = cre_vein.get("crvek", np.nan)
         if crvek == -1:
             crvek = np.nan
+        if diameter_paths and np.isfinite(crvek):
+            save_diameter_image(image, plots_vein, diameter_paths["vein"])
+        del plots_vein
+    del out_vein
 
     craek_um = craek * um_per_px if np.isfinite(craek) and np.isfinite(um_per_px) else np.nan
     crvek_um = crvek * um_per_px if np.isfinite(crvek) and np.isfinite(um_per_px) else np.nan
