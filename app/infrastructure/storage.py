@@ -87,9 +87,6 @@ def convert_paths_dict_to_base64(paths: Dict[str, str]) -> Dict[str, str]:
     images: Dict[str, str] = {}
     for key, file_path_str in paths.items():
 
-        if key == 'preprocessed':
-            continue
-
         file_path = Path(file_path_str)
 
         if not file_path.exists():
