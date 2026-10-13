@@ -2,7 +2,8 @@ from __future__ import annotations
 from pathlib import Path
 from arq.jobs import Job, JobStatus
 from fastapi import Request
-from app.arq.task_enqueued_response import StatusTask, TaskResultResponse, TaskMetadata, to_ai_model_response
+from app.arq.task_enqueued_response import StatusTask, TaskResultResponse, TaskMetadata, to_ai_model_response, \
+    AiModelResponse
 from typing import Annotated, Dict, Tuple, Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -99,7 +100,7 @@ def fuzzy_proximity_tree_stage(payload: BiomarkersResponse, service: Service) ->
     try:
         return service.run_fuzzy_tree(payload.model_dump())
     except Exception as exc:
-        raise _service_error_to_http(exc, "Ã¡rbol de proximidad difusa") from exc
+        raise _service_error_to_http(exc, "Árbol de proximidad difusa") from exc
 
 
 @router.post("/pipeline/sequential", response_model=SequentialPipelineResponse)
@@ -109,6 +110,16 @@ async def run_pipeline_sequential(
     content, filename = await _read_uploaded_image(file)
     try:
         return service.run_sequential(content, filename, include_diameter_images=include_diameter_images)
+    except Exception as exc:
+        raise _service_error_to_http(exc, "pipeline secuencial") from exc
+
+
+@router.post("/pipeline/sequential/v1", response_model=AiModelResponse)
+async def run_pipeline_sequential(service: Service, file: UploadFile = File(...)) -> AiModelResponse:
+    content, filename = await _read_uploaded_image(file)
+    try:
+        response = service.run_sequential(content, filename, include_diameter_images=True)
+        return to_ai_model_response(response)
     except Exception as exc:
         raise _service_error_to_http(exc, "pipeline secuencial") from exc
 
