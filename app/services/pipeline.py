@@ -2,6 +2,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+from app.config import PLOT_CRE
 from app.schemas import (
     BiomarkersResponse, ClassificationResponse, PredictionResponse,
     PreprocessingResponse, LUNetResponse, PVBMStageResponse,
@@ -9,8 +10,8 @@ from app.schemas import (
 )
 from app.infrastructure.logging import LOGGER, _elapsed_ms
 from app.infrastructure.model_loader import ModelBundle, load_models
-from app.infrastructure.storage import (PipelineContext, create_context, build_artifact_paths, ensure_runtime_dirs,
-                                        convert_paths_dict_to_base64)
+from app.infrastructure.storage import PipelineContext, create_context, build_artifact_paths, ensure_runtime_dirs, \
+    diameter_image_path, convert_paths_dict_to_base64
 from app.services.preprocessing import preprocess_image
 from app.services.segmentation import segment_image
 from app.services.biomarkers import extract_features
@@ -56,7 +57,7 @@ class RetinalPipelineService:
         )
         return response
 
-    def run_pvbm(self, image_bytes: bytes, filename: str) -> PVBMStageResponse:
+    def run_pvbm(self, image_bytes: bytes, filename: str, *, include_diameter_images: Optional[bool] = None) -> PVBMStageResponse:
         context = create_context(image_bytes, filename)
         _preprocessing, preprocessed_path = self._run_preprocessing_stage(context)
         _lunet, artery_path, vein_path, vessel_path = self._run_lunet_stage(
@@ -69,6 +70,7 @@ class RetinalPipelineService:
             vein_path=vein_path,
             preprocessed_path=preprocessed_path,
             vessel_path=vessel_path,
+            include_diameter_images=include_diameter_images,
         )
         return response
 
@@ -76,7 +78,9 @@ class RetinalPipelineService:
         response, _classification = self._run_fuzzy_tree_stage(biomarkers)
         return response
 
-    def run_sequential(self, image_bytes: bytes, filename: str) -> SequentialPipelineResponse:
+    def run_sequential(
+        self, image_bytes: bytes, filename: str, *, include_diameter_images: Optional[bool] = None,
+    ) -> SequentialPipelineResponse:
         total_started = time.perf_counter()
         context = create_context(image_bytes, filename)
 
@@ -99,6 +103,7 @@ class RetinalPipelineService:
                 vein_path=vein_path,
                 preprocessed_path=preprocessed_path,
                 vessel_path=vessel_path,
+                include_diameter_images=include_diameter_images,
             )
             fuzzy_tree, _classification = self._run_fuzzy_tree_stage(biomarkers)
 
@@ -185,10 +190,17 @@ class RetinalPipelineService:
         vein_path: Path,
         preprocessed_path: Optional[Path] = None,
         vessel_path: Optional[Path] = None,
+        include_diameter_images: Optional[bool] = None,
     ) -> Tuple[PVBMStageResponse, Dict[str, Any]]:
         started = time.perf_counter()
         LOGGER.info("pvbm[%s]: started filename=%s", context.request_id, context.filename)
-        biomarkers = extract_features(self.models, context.input_path, artery_path, vein_path)
+        generate_images = PLOT_CRE if include_diameter_images is None else include_diameter_images
+        diameter_paths = {
+            vessel: diameter_image_path(context.request_id, vessel)
+            for vessel in ("artery", "vein")
+        } if generate_images else {}
+        options = {"diameter_paths": diameter_paths} if generate_images else {}
+        biomarkers = extract_features(self.models, context.input_path, artery_path, vein_path, **options)
         LOGGER.info(
             "pvbm[%s]: completed elapsed_ms=%.2f",
             context.request_id,
@@ -206,6 +218,10 @@ class RetinalPipelineService:
                 vessel_path=vessel_path,
             ),
         )
+        for vessel, path in diameter_paths.items():
+            if path.is_file():
+                response.artifact_paths[f"diameters_{vessel}"] = str(path)
+                response.diameter_images[vessel] = f"/artifacts/{context.request_id}/diameters/{vessel}"
         return response, biomarkers
 
     def _run_fuzzy_tree_stage(self, biomarkers: Dict[str, Any]) -> Tuple[FuzzyTreeResponse, Dict[str, Any]]:

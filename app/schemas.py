@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Dict, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BiomarkersResponse(BaseModel):
@@ -55,6 +55,7 @@ class PVBMStageResponse(BaseModel):
     filename: str
     biomarkers: BiomarkersResponse
     artifact_paths: Dict[str, str]
+    diameter_images: Dict[str, str] = Field(default_factory=dict)
 
 
 class FuzzyTreeResponse(BaseModel):
