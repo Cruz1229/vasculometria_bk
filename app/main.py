@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.config import CORS_ALLOW_ORIGINS, CORS_ALLOW_ORIGIN_REGEX, CORS_ALLOW_CREDENTIALS, REDIS_HOST, REDIS_PORT, \
-    LOAD_MODELS_ON_STARTUP
+    LOAD_MODELS_ON_STARTUP, USE_ARQ_MODEL_LOADING
 from app.infrastructure.logging import LOGGER
 from app.services.pipeline import RetinalPipelineService
 
@@ -23,7 +23,8 @@ async def lifespan(app: FastAPI):
     if LOAD_MODELS_ON_STARTUP:
         app.state.pipeline_service.startup()
 
-    app.state.arq_redis = await create_pool(RedisSettings(host=REDIS_HOST, port=REDIS_PORT))
+    if USE_ARQ_MODEL_LOADING:
+        app.state.arq_redis = await create_pool(RedisSettings(host=REDIS_HOST, port=REDIS_PORT))
 
     yield
 
