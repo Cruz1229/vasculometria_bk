@@ -64,7 +64,8 @@ CORS_ALLOW_CREDENTIALS = os.getenv("RETINAL_API_CORS_ALLOW_CREDENTIALS", "false"
 
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-LOAD_MODELS_ON_STARTUP = os.getenv("LOAD_MODELS_ON_STARTUP", "False").lower() in ("true", "1", "yes")
+LOAD_MODELS_ON_STARTUP = os.getenv("LOAD_MODELS_ON_STARTUP", "true").lower() in ("true", "1", "yes")
+USE_ARQ_MODEL_LOADING = os.getenv("USE_ARQ_MODEL_LOADING", "false").strip().lower() in ("true", "1", "yes")
 NUM_THREADS = int(os.getenv("NUM_THREADS", 2))
 MAX_JOBS = int(os.getenv("MAX_JOBS", 1))
 JOB_TIMEOUT = int(os.getenv("JOB_TIMEOUT", 180))
