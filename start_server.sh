@@ -34,8 +34,8 @@ echo "[start_server] esperando API..."
 READY=0
 
 for i in $(seq 1 120); do
-    if curl -fsS "http://${API_HOST}:${API_PORT}/openapi.json" \
-        >/dev/null 2>&1; then
+    if curl -fsS "http://${API_HOST}:${API_PORT}/health" \
+    >/dev/null 2>&1; then
         READY=1
         echo "[start_server] API disponible después de ${i}s"
         break
