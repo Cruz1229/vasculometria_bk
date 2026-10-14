@@ -71,6 +71,10 @@ MAX_JOBS = int(os.getenv("MAX_JOBS", 1))
 JOB_TIMEOUT = int(os.getenv("JOB_TIMEOUT", 180))
 KEEP_RESULT = int(os.getenv("KEEP_RESULT", 3600))
 
+ALLOWED_IPS = set(os.getenv("ALLOWED_IPS", "127.0.0.1,::1").split(","))
+BACKEND_SECRET_TOKEN = os.getenv("BACKEND_SECRET_TOKEN", "12345")
+TOKEN_HEADER_NAME = "X-Backend-Token"
+
 INPUT_DIR = BASE_DIR / "input"
 PREPROCESSED_DIR = BASE_DIR / "preprocessed"
 ARTERY_DIR = BASE_DIR / "artery"
