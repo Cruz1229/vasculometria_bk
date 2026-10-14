@@ -1,9 +1,12 @@
 from __future__ import annotations
+
+import base64
+import binascii
 from pathlib import Path
 from arq.jobs import Job, JobStatus
 from fastapi import Request
 from app.arq.task_enqueued_response import StatusTask, TaskResultResponse, TaskMetadata, to_ai_model_response, \
-    AiModelResponse
+    AiModelResponse, AiModelRequest
 from typing import Annotated, Dict, Tuple, Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -115,11 +118,33 @@ async def run_pipeline_sequential(
 
 
 @router.post("/pipeline/sequential/v1", response_model=AiModelResponse)
-async def run_pipeline_sequential(service: Service, file: UploadFile = File(...)) -> AiModelResponse:
-    content, filename = await _read_uploaded_image(file)
+async def run_pipeline_sequential(service: Service, request: AiModelRequest) -> AiModelResponse:
+
     try:
+        encoded = request.image_base64.strip()
+
+        # Aceptar Base64 puro o data URI
+        if encoded.startswith('data:'):
+            header, separator, encoded = encoded.partition(',')
+
+            if not separator or ';base64' not in header.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail="La URI de la imagen debe contener datos Base64 válidos.")
+
+        content = base64.b64decode(encoded, validate=True)
+        filename = request.filename
+
+        if not content:
+            raise HTTPException(status_code=400, detail="La imagen está vacía.")
+
         response = service.run_sequential(content, filename, include_diameter_images=True)
         return to_ai_model_response(response)
+
+    except (ValueError, binascii.Error) as exc:
+        raise HTTPException(status_code=400, detail="La imagen Base64 no es válida.") from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _service_error_to_http(exc, "pipeline secuencial") from exc
 

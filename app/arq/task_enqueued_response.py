@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas import SequentialPipelineResponse
 
@@ -33,6 +33,11 @@ class ProcessedImage(BaseModel):
 class AiModelResponse(BaseModel):
     predictions: list[Prediction] = []
     images: list[ProcessedImage] = []
+
+
+class AiModelRequest(BaseModel):
+    filename: str = Field(min_length=1)
+    image_base64: str = Field(min_length=1)
 
 
 class TaskResultResponse(BaseModel):
