@@ -15,7 +15,7 @@ REPO_DIR="/app"
 
 API_HOST="${API_HOST:-127.0.0.1}"
 MODEL_SERVER_PORT="${MODEL_SERVER_PORT:-18000}"
-API_PORT="$MODEL_SERVER_PORT"   # uvicorn y worker.py usan el mismo puerto
+API_PORT=8001
 MODEL_LOG_FILE="${MODEL_LOG_FILE:-/tmp/model/server.log}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-1800}"
 
