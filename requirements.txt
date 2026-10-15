@@ -3,7 +3,7 @@ uvicorn[standard]
 python-multipart
 numpy~=2.4.6
 pandas
-pillow~=12.3.0
+pillow~=12.2.0
 scikit-image~=0.26.0
 scipy~=1.17.1
 tensorflow~=2.21.0
