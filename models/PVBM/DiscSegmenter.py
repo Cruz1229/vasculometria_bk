@@ -19,7 +19,7 @@ class DiscSegmenter:
 
     def download_model(self):
         """Download the ONNX model from Google Drive if it does not exist."""
-        file_id = "116EEFBn7qr_LpCBb8GBuyzpa_KGp4xPX"
+        file_id = "1VgJN8hMx41x20AdJ8GuIcQ5TPoDR3iqP"
         url = f"https://drive.google.com/uc?id={file_id}"
 
         print(f"Model path: {self.model_path}")

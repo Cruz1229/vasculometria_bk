@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
-MODEL_URL = "https://drive.google.com/uc?id=116EEFBn7qr_LpCBb8GBuyzpa_KGp4xPX"
+file_id = "1VgJN8hMx41x20AdJ8GuIcQ5TPoDR3iqP"
+MODEL_URL = f"https://drive.google.com/uc?id={file_id}"
 
 
 def download_disc_model(output: Path) -> Path:
