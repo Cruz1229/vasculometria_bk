@@ -5,7 +5,7 @@ from pathlib import Path
 from vastai import Worker, WorkerConfig, HandlerConfig, BenchmarkConfig, LogActionConfig
 
 MODEL_SERVER_URL = os.getenv('MODEL_SERVER_URL', '127.0.0.1')
-MODEL_SERVER_PORT = int(os.getenv('MODEL_SERVER_PORT', '8001'))
+MODEL_SERVER_PORT = int(os.getenv('MODEL_SERVER_PORT', '18000'))
 MODEL_LOG_FILE = os.getenv('MODEL_LOG_FILE', '/app/runtime/api.log')
 
 BENCHMARK_IMAGE_PATH = os.getenv('BENCHMARK_IMAGE_PATH', '')
