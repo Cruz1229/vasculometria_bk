@@ -1,24 +1,70 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -Eeuo pipefail
+
+# ============================================================
+# EyeInsights - Vast.ai Serverless startup
+# Descarga el repositorio, instala dependencias,
+# inicia FastAPI y finalmente ejecuta PyWorker.
+# ============================================================
 
 LOGFILE=/var/log/start_server.sh.log
 exec > >(tee -a "$LOGFILE") 2>&1
 
 echo "[start_server] $(date -u +'%FT%TZ') iniciando EyeInsights"
 
-# 1. Ubicarse en la raíz del repositorio
-cd "$(dirname "$0")"
-REPO_DIR="$(pwd)"
+# 1. Preparar directorios
+cd /workspace
 
-# 2. Configurar la API
+REPO_DIR="${PYWORKER_DIR:-/workspace/eyeinsights}"
+REPO_URL="${PYWORKER_REPO:?ERROR: configura PYWORKER_REPO}"
+REPO_REF="${PYWORKER_REF:-main}"
+
+mkdir -p /var/log/model
+
+# 2. Obtener el código fuente
+if [ ! -f "$REPO_DIR/worker.py" ]; then
+    echo "[start_server] clonando $REPO_URL"
+
+    git clone \
+        --depth 1 \
+        --branch "$REPO_REF" \
+        "$REPO_URL" \
+        "$REPO_DIR"
+else
+    echo "[start_server] repositorio ya disponible en $REPO_DIR"
+fi
+
+cd "$REPO_DIR"
+
+echo "[start_server] archivos del proyecto:"
+ls -la
+
+# 3. Verificar archivos necesarios
+for file in requirements.txt worker.py start_server.sh; do
+    if [ ! -f "$file" ]; then
+        echo "[start_server] ERROR: falta $file"
+        exit 1
+    fi
+done
+
+if [ ! -d app ]; then
+    echo "[start_server] ERROR: no existe el directorio app/"
+    exit 1
+fi
+
+# 4. Instalar dependencias del proyecto
+echo "[start_server] instalando requirements.txt"
+
+python -m pip install --no-cache-dir -r requirements.txt
+
+# PyWorker SDK
+python -m pip install --no-cache-dir vastai
+
+# 5. Configurar e iniciar FastAPI
 export API_HOST=127.0.0.1
 export API_PORT=8001
 
-mkdir -p /var/log/model
-export MODEL_LOG_FILE=/var/log/model/server.log
-
-# 3. Iniciar FastAPI en segundo plano
-echo "[start_server] iniciando FastAPI..."
+echo "[start_server] iniciando FastAPI en ${API_HOST}:${API_PORT}"
 
 nohup python -m uvicorn app.main:app \
     --host "$API_HOST" \
@@ -28,21 +74,22 @@ nohup python -m uvicorn app.main:app \
 API_PID=$!
 echo "[start_server] FastAPI PID=$API_PID"
 
-# 4. Esperar a que FastAPI esté disponible
-echo "[start_server] esperando API..."
+# 6. Esperar a que la API esté disponible
+echo "[start_server] esperando endpoint /health"
 
-READY=0
+API_READY=0
 
-for i in $(seq 1 120); do
-    if curl -fsS "http://${API_HOST}:${API_PORT}/health" \
-    >/dev/null 2>&1; then
-        READY=1
+for i in $(seq 1 180); do
+    if curl -fsS \
+        "http://${API_HOST}:${API_PORT}/health" \
+        >/dev/null 2>&1; then
+        API_READY=1
         echo "[start_server] API disponible después de ${i}s"
         break
     fi
 
     if ! kill -0 "$API_PID" 2>/dev/null; then
-        echo "[start_server] ERROR: FastAPI terminó inesperadamente"
+        echo "[start_server] ERROR: FastAPI terminó"
         tail -n 100 /var/log/model/server.stdout || true
         exit 1
     fi
@@ -50,15 +97,14 @@ for i in $(seq 1 120); do
     sleep 1
 done
 
-if [ "$READY" -ne 1 ]; then
-    echo "[start_server] ERROR: la API no respondió en 120 segundos"
+if [ "$API_READY" -ne 1 ]; then
+    echo "[start_server] ERROR: FastAPI no respondió a /health"
     tail -n 100 /var/log/model/server.stdout || true
     kill "$API_PID" 2>/dev/null || true
     exit 1
 fi
 
-# 5. Iniciar PyWorker en primer plano
-echo "[start_server] iniciando PyWorker..."
+# 7. Iniciar PyWorker en primer plano
+echo "[start_server] iniciando worker.py"
 
-cd "$REPO_DIR"
 exec python worker.py
