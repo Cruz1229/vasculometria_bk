@@ -8,7 +8,22 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "[start_server] $(date -u +'%FT%TZ') iniciando EyeInsights"
 export GIT_TERMINAL_PROMPT=0
 
-# --- Configuración ---
+# ---------- Localizar Python (venv de Vast o del sistema) ----------
+set +u
+if [ -f /venv/main/bin/activate ]; then
+    # shellcheck disable=SC1091
+    . /venv/main/bin/activate
+fi
+set -u
+
+PYTHON_BIN=""
+for cand in /venv/main/bin/python /opt/sys-venv/bin/python "$(command -v python3 || true)" "$(command -v python || true)"; do
+    if [ -n "$cand" ] && [ -x "$cand" ]; then PYTHON_BIN="$cand"; break; fi
+done
+[ -n "$PYTHON_BIN" ] || { echo "[start_server] ERROR: no se encontró Python"; ls -la /venv /opt 2>/dev/null || true; exit 1; }
+echo "[start_server] usando Python: $PYTHON_BIN ($("$PYTHON_BIN" --version 2>&1))"
+
+# ---------- Configuración ----------
 REPO_URL="${PYWORKER_REPO:-https://github.com/Cruz1229/vasculometria_bk.git}"
 REPO_REF="${PYWORKER_REF:-main}"
 REPO_DIR="/app"
@@ -49,7 +64,7 @@ mkdir -p "$RETINAL_API_BASE_DIR"
 
 # ---------- Dependencias ----------
 echo "[start_server] instalando requirements.txt"
-python -m pip install --no-cache-dir -r requirements.txt
+"$PYTHON_BIN" -m pip install --no-cache-dir -r requirements.txt
 
 # ---------- Variables para la app y el worker ----------
 export API_HOST MODEL_SERVER_PORT WORKER_PORT MODEL_LOG_FILE
@@ -57,7 +72,7 @@ export MODEL_SERVER_URL="${MODEL_SERVER_URL:-http://127.0.0.1}"
 
 # ---------- FastAPI (su log va al archivo que lee el PyWorker) ----------
 echo "[start_server] iniciando FastAPI en ${API_HOST}:${MODEL_SERVER_PORT}"
-python -m uvicorn app.main:app --host "$API_HOST" --port "$MODEL_SERVER_PORT" \
+"$PYTHON_BIN" -m uvicorn app.main:app --host "$API_HOST" --port "$MODEL_SERVER_PORT" \
     > "$MODEL_LOG_FILE" 2>&1 &
 API_PID=$!
 
@@ -87,4 +102,4 @@ echo "[start_server] FastAPI: ${MODEL_SERVER_PORT} | PyWorker: ${WORKER_PORT}"
 echo "[start_server] ${_var}=${!_var:-<NO DEFINIDO>}"
 
 echo "[start_server] iniciando PyWorker"
-exec python worker.py
+exec "$PYTHON_BIN" worker.py
