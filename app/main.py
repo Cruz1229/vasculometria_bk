@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import secrets
 from contextlib import asynccontextmanager
 
 from arq import create_pool
@@ -11,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import router
 from app.config import CORS_ALLOW_ORIGINS, CORS_ALLOW_ORIGIN_REGEX, CORS_ALLOW_CREDENTIALS, REDIS_HOST, REDIS_PORT, \
-    LOAD_MODELS_ON_STARTUP, USE_ARQ_MODEL_LOADING, ALLOWED_IPS, TOKEN_HEADER_NAME, BACKEND_SECRET_TOKEN
+    LOAD_MODELS_ON_STARTUP, USE_ARQ_MODEL_LOADING, ALLOWED_IPS
 from app.infrastructure.logging import LOGGER
 from app.services.pipeline import RetinalPipelineService
 
@@ -76,22 +75,4 @@ async def security_middleware(request: Request, call_next):
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": f"Acceso prohibido. IP no autorizada: {client_ip}"})
 
-    # Validación de Token
-    client_token = request.headers.get(TOKEN_HEADER_NAME)
-
-    if not client_token:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": f"Falta la cabecera de autenticación: {TOKEN_HEADER_NAME}"})
-
-    # Comparación segura en tiempo constante contra ataques de temporización
-    is_token_valid = secrets.compare_digest(client_token, BACKEND_SECRET_TOKEN)
-
-    if not is_token_valid:
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"detail": "Token del backend no válido"})
-
-    # Si pasa ambas validaciones, la petición continúa hacia el endpoint correspondiente
-    response = await call_next(request)
-    return response
+    return await call_next(request)
