@@ -36,6 +36,7 @@ class AiModelResponse(BaseModel):
 
 
 class AiModelRequest(BaseModel):
+    token: str = Field(min_length=1)
     filename: str = Field(min_length=1)
     image_base64: str = Field(min_length=1)
 

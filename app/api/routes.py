@@ -3,16 +3,17 @@ from __future__ import annotations
 import base64
 import binascii
 from pathlib import Path
+import secrets
 from arq.jobs import Job, JobStatus
 from fastapi import Request
 from app.arq.task_enqueued_response import StatusTask, TaskResultResponse, TaskMetadata, to_ai_model_response, \
     AiModelResponse, AiModelRequest
 from typing import Annotated, Dict, Tuple, Literal
 from uuid import UUID
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, JSONResponse
 from app.infrastructure.storage import diameter_image_path
-from app.config import SUPPORTED_IMAGE_SUFFIXES
+from app.config import BACKEND_SECRET_TOKEN, SUPPORTED_IMAGE_SUFFIXES
 from app.api.dependencies import get_service
 from app.services.pipeline import RetinalPipelineService
 from app.schemas import (
@@ -119,6 +120,19 @@ async def run_pipeline_sequential(
 
 @router.post("/pipeline/sequential/v1", response_model=AiModelResponse)
 async def run_pipeline_sequential(service: Service, request: AiModelRequest) -> AiModelResponse:
+
+    if not request.token:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": f"Falta el token de autenticación"})
+
+    # Comparación segura en tiempo constante contra ataques de temporización
+    is_token_valid = secrets.compare_digest(request.token, BACKEND_SECRET_TOKEN)
+
+    if not is_token_valid:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Token del backend no válido"})
 
     try:
         encoded = request.image_base64.strip()
