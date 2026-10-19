@@ -17,7 +17,7 @@ def download_disc_model(output: Path) -> Path:
 
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(output.suffix + ".part")
-    result = gdown.download(MODEL_URL, str(temporary), quiet=False)
+    result = gdown.download(MODEL_URL, str(temporary), quiet=False, fuzzy=True)
     if result is None or not temporary.is_file() or temporary.stat().st_size == 0:
         raise RuntimeError("No se pudo descargar el modelo de disco óptico de PVBM")
     temporary.replace(output)

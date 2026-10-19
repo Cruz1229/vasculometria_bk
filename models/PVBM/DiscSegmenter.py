@@ -27,7 +27,7 @@ class DiscSegmenter:
             import gdown
 
             print(f"Downloading model from Google Drive...")
-            gdown.download(url, self.model_path, quiet=False)
+            gdown.download(url, self.model_path, quiet=False, fuzzy=True)
             print(f"Model downloaded to {self.model_path}")
         else:
             print("Model already exists, skipping download.")
