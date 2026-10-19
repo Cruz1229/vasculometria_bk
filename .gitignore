@@ -1,5 +1,7 @@
 .venv/
 venv/
+bk_venv/
+.bk_venv/
 __pycache__/
 **/__pycache__/
 *.py[cod]
