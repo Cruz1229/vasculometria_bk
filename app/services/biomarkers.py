@@ -7,6 +7,7 @@ from PIL import Image
 from skimage.morphology import skeletonize
 from app.config import MAX_ROI_SIZE, OD_DIAMETER_UM
 from app.infrastructure.model_loader import ModelBundle
+from app.services.diameter_visualization import save_diameter_image
 
 
 def _safe_float(value: Any) -> Optional[float]:
@@ -106,8 +107,12 @@ def extract_features(
         craek = cre_art.get("craek", np.nan)
         if craek == -1:
             craek = np.nan
-        if diameter_paths and np.isfinite(craek):
-            save_diameter_image(image, plots_artery, diameter_paths["artery"])
+        if diameter_paths:
+            save_diameter_image(
+                image, plots_artery, diameter_paths["artery"],
+                segmentation_roi=seg_roi_cre,
+                zones_ABC=zones_ABC,
+            )
         del plots_artery
     del out_artery
 
@@ -137,8 +142,12 @@ def extract_features(
         crvek = cre_vein.get("crvek", np.nan)
         if crvek == -1:
             crvek = np.nan
-        if diameter_paths and np.isfinite(crvek):
-            save_diameter_image(image, plots_vein, diameter_paths["vein"])
+        if diameter_paths:
+            save_diameter_image(
+                image, plots_vein, diameter_paths["vein"],
+                segmentation_roi=seg_roi_v,
+                zones_ABC=zones_ABC,
+            )
         del plots_vein
     del out_vein
 

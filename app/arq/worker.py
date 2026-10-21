@@ -19,7 +19,7 @@ async def startup(ctx: dict):
 async def run_sequential_pipeline_task(ctx: dict, content: bytes, filename: str) -> dict:
 
     service = ctx['pipeline_service']
-    result = service.run_sequential(content, filename)
+    result = service.run_sequential(content, filename, include_diameter_images=True)
 
     if hasattr(result, 'model_dump'):
         return result.model_dump()
