@@ -19,15 +19,16 @@ class DiscSegmenter:
 
     def download_model(self):
         """Download the ONNX model from Google Drive if it does not exist."""
-        file_id = "1VgJN8hMx41x20AdJ8GuIcQ5TPoDR3iqP"
-        url = f"https://drive.google.com/uc?id={file_id}"
+        """ file_id = "1VgJN8hMx41x20AdJ8GuIcQ5TPoDR3iqP"
+        url = f"https://drive.google.com/uc?id={file_id}" """
 
         print(f"Model path: {self.model_path}")
         if not os.path.exists(self.model_path):
-            import gdown
-
-            print(f"Downloading model from Google Drive...")
-            gdown.download(url, self.model_path, quiet=False)
+            print(f"Downloading model from Hugging Face Hub...")
+            from huggingface_hub import hf_hub_download
+            import shutil
+            src = hf_hub_download("JonathanFhima/RLAD-SwinV2-Large", "pvbm/lunetv2_odc.onnx")
+            shutil.copy(src, self.model_path)
             print(f"Model downloaded to {self.model_path}")
         else:
             print("Model already exists, skipping download.")
