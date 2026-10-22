@@ -1,11 +1,12 @@
 import os
-import requests
 import onnxruntime as ort
 import numpy as np
 import PIL
 from PIL import Image
 from torchvision import transforms
-import cv2
+
+if hasattr(ort, "preload_dlls"):
+    ort.preload_dlls()
 
 class LesionSegmenter:
     """A class that performs lesion segmentation."""
