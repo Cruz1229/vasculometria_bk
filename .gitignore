@@ -21,3 +21,4 @@ tests
 run_wsl_gpu.sh
 
 .idea
+.python-version
