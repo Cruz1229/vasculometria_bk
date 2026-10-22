@@ -21,28 +21,6 @@ def _safe_float(value: Any) -> Optional[float]:
         return None
     return value
 
-
-def save_diameter_image(image: Image.Image, measurements, output_path: Path) -> bool:
-    if not measurements:
-        return False
-    result = image.convert("RGBA")
-    has_measurements = False
-    for measurement in measurements:
-        plot = measurement.get("plot")
-        if plot is None:
-            continue
-        rgba = np.clip(np.nan_to_num(plot), 0, 1)
-        if not np.any(rgba[..., 3]):
-            continue
-        overlay = Image.fromarray((rgba * 255).astype(np.uint8))
-        result = Image.alpha_composite(result, overlay)
-        has_measurements = True
-    if has_measurements:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        result.convert("RGB").save(output_path, format="PNG")
-    return has_measurements
-
-
 def extract_features(
     models: ModelBundle, image_path: Path, artery_path: Path, vein_path: Path,
     *, diameter_paths: Optional[Dict[str, Path]] = None,
