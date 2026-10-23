@@ -63,8 +63,11 @@ mkdir -p "$RETINAL_API_BASE_DIR"
 [ -f "$BENCHMARK_IMAGE_PATH" ] || echo "[start_server] AVISO: no existe $BENCHMARK_IMAGE_PATH (el benchmark fallará)"
 
 # ---------- Dependencias ----------
-echo "[start_server] instalando requirements.txt"
+echo "[start_server] Instalando requirements.txt"
 "$PYTHON_BIN" -m pip install --no-cache-dir -r requirements.txt
+
+echo "[start_server] Instalando requirements-torch.txt"
+"$PYTHON_BIN" -m pip install --no-cache-dir -r requirements-torch.txt
 
 # ---------- Variables para la app y el worker ----------
 export API_HOST MODEL_SERVER_PORT WORKER_PORT MODEL_LOG_FILE
