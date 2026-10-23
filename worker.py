@@ -11,6 +11,7 @@ MODEL_LOG_FILE = os.getenv('MODEL_LOG_FILE', '/app/runtime/api.log')
 BENCHMARK_IMAGE_PATH = os.getenv('BENCHMARK_IMAGE_PATH', '')
 PIPELINE_ROUTE = '/pipeline/sequential/v1'
 
+BACKEND_SECRET_TOKEN = os.getenv("BACKEND_SECRET_TOKEN", "12345")
 
 def benchmark_generator() -> dict:
     if not BENCHMARK_IMAGE_PATH:
@@ -27,6 +28,7 @@ def benchmark_generator() -> dict:
 
     return {
         "filename": image_path.name,
+        "token": BACKEND_SECRET_TOKEN,
         "image_base64": image_base64,
     }
 
