@@ -5,7 +5,7 @@ Use a RunPod GPU Pod for FastAPI. The legacy Vast.ai worker and startup scripts 
 ## Pod configuration
 
 1. Select an available NVIDIA GPU. The RTX 3070 with 8 GB was verified with one Uvicorn worker and 1024 × 1024 LUNet input using the graph settings below.
-2. Select the official image `runpod/pytorch:2.1.0-cu1281-torch280-ubuntu2404`. Expose HTTP port **8001**. The image's Nginx process already owns that port and forwards to localhost:8000. Run Uvicorn on **127.0.0.1:8000** inside this image.
+2. Select the official image `runpod/pytorch:2.1.0-cu1281-torch280-ubuntu2404`. Expose HTTP port **8001**. The image's Nginx process owns the public port. Run Uvicorn on **127.0.0.1:8000** inside the image and point the Nginx `8001` server at that exact IPv4 address.
 3. Use the RunPod web terminal for setup. Leave the Jupyter and SSH options off when they are unnecessary. The running Pod can use a 50 GB container disk without an extra volume. Stopping a Pod erases the container disk; attach persistent storage or automate setup at container start if the deployment must survive a restart.
 
 ## Install and launch
@@ -64,6 +64,7 @@ Swagger is at `/docs`. Requests to the multipart pipeline must supply `X-Backend
 
 ## Troubleshooting
 
-- An HTML response or HTTP 405 from the exposed port can come from the template's welcome page while Uvicorn is unavailable. Check for JSON at `/health` and inspect `/workspace/retinal-api.log`.
+- If an exposed port returns HTML or HTTP 405 for `POST /pipeline/sequential`, compare the Nginx access log with `/workspace/retinal-api.log`. A 405 recorded only by Nginx indicates the request did not reach FastAPI.
+- In the official image above, back up `/etc/nginx/nginx.conf` and change only the server block with `listen 8001;`. Set `proxy_pass http://127.0.0.1:8000;`. Use a copy of `snippets/nginx-proxy.conf` for that location with the `proxy_intercept_errors on;` and `error_page 502 =200 @502;` directives removed. This keeps upstream failures visible instead of replacing them with the template's welcome page. Run `nginx -t` before `nginx -s reload`, then verify JSON at `/health` and run an authenticated multipart POST to `/pipeline/sequential`. Reapply the proxy adjustment when rebuilding the Pod from its base image.
 - If TensorFlow cannot allocate GPU memory at 1024 × 1024, use graph execution and the allocator settings above. Use a larger GPU if the pipeline still exhausts memory.
 - Check the active provider on a real ONNX inference session using `session.get_providers()`. The list of providers installed in the package alone cannot confirm CUDA inference.
