@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
+import secrets
 
 from arq import create_pool
 from arq.connections import RedisSettings
@@ -10,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import router
 from app.config import CORS_ALLOW_ORIGINS, CORS_ALLOW_ORIGIN_REGEX, CORS_ALLOW_CREDENTIALS, REDIS_HOST, REDIS_PORT, \
-    LOAD_MODELS_ON_STARTUP, USE_ARQ_MODEL_LOADING, ALLOWED_IPS
+    LOAD_MODELS_ON_STARTUP, USE_ARQ_MODEL_LOADING, ALLOWED_IPS, BACKEND_SECRET_TOKEN, TOKEN_HEADER_NAME
 from app.infrastructure.logging import LOGGER
 from app.services.pipeline import RetinalPipelineService
 
@@ -22,6 +24,9 @@ async def lifespan(app: FastAPI):
         CORS_ALLOW_ORIGINS, CORS_ALLOW_ORIGIN_REGEX, CORS_ALLOW_CREDENTIALS,
     )
 
+    if os.getenv("REQUIRE_BACKEND_TOKEN_HEADER", "false").lower() in ("true", "1", "yes") and (not BACKEND_SECRET_TOKEN or BACKEND_SECRET_TOKEN == "12345"):
+        raise RuntimeError("Establece BACKEND_SECRET_TOKEN seguro antes de publicar la API")
+
     if LOAD_MODELS_ON_STARTUP:
         app.state.pipeline_service.startup()
 
@@ -30,7 +35,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    await app.state.arq_redis.close()
+    if USE_ARQ_MODEL_LOADING:
+        await app.state.arq_redis.close()
 
 
 def create_app(service: RetinalPipelineService | None = None) -> FastAPI:
@@ -59,7 +65,17 @@ app = create_app()
 @app.middleware('http')
 async def security_middleware(request: Request, call_next):
 
-    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/health"]:
+    if request.url.path in ["/docs", "/redoc", "/openapi.json", "/health", "/ping"] or request.method == "OPTIONS":
+        return await call_next(request)
+
+    if os.getenv("REQUIRE_BACKEND_TOKEN_HEADER", "false").lower() in ("true", "1", "yes"):
+        # La ruta /v1 valida el token incluido en el JSON, para clientes existentes.
+        if request.url.path != "/pipeline/sequential/v1":
+            supplied = request.headers.get(TOKEN_HEADER_NAME, "")
+            if not supplied:
+                return JSONResponse(status_code=401, content={"detail": "Falta token de acceso"})
+            if not secrets.compare_digest(supplied, BACKEND_SECRET_TOKEN):
+                return JSONResponse(status_code=403, content={"detail": "Token no válido"})
         return await call_next(request)
 
     # Validación de IP

@@ -87,6 +87,9 @@ def load_models() -> ModelBundle:
         )
         model.load_weights(str(WEIGHTS_PATH))
 
+    if _env_flag("LUNET_GRAPH_INFERENCE", False):
+        model = tf.function(model, reduce_retracing=True)
+
     return ModelBundle(
         model=model,
         segmenter=DiscSegmenter(),
